@@ -242,16 +242,12 @@ export default function HadIBought() {
   // Build lookup — use live data if available, otherwise static
   const dataLookup = useMemo(() => {
     if (liveData) {
-      // Build from live Alpha Vantage data
       const dates = Object.keys(liveData).sort();
-      const firstAdj = liveData[dates[0]]?.adjClose;
-      const firstClose = liveData[dates[0]]?.close;
       const lookup = {};
       for (const ym of dates) {
         const { adjClose, close } = liveData[ym];
-        lookup[ym] = { adj: adjClose, close, cpi: 1 }; // CPI from static fallback
+        lookup[ym] = { adj: adjClose, close, cpi: 1 };
       }
-      // Merge CPI from static data
       for (const [ym, , , cpi] of RAW_DATA) {
         if (lookup[ym]) lookup[ym].cpi = cpi;
       }
@@ -296,7 +292,7 @@ export default function HadIBought() {
         years: years.toFixed(1),
       }
     };
-  }, [dataLookup, investment, startDate, endDate, dividendMode, inflation]);
+  }, [dataLookup, investment, startDate, endDate, inflation]);
 
   const showTR = dividendMode === "reinvested" || dividendMode === "both";
   const showPO = dividendMode === "excluded" || dividendMode === "both";
@@ -685,22 +681,6 @@ function MiniStat({ label, value, sub, color, big, tooltip }) {
       <div style={{ fontSize: 11, fontWeight: 600, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 6 }}>{label}</div>
       <div style={{ fontSize: big ? 22 : 18, color: color || "#111827", fontWeight: 700, letterSpacing: "-0.5px" }}>{value}</div>
       {sub && <div style={{ fontSize: 11, color: "#9ca3af", marginTop: 3 }}>{sub}</div>}
-    </div>
-  );
-}
-
-function StatCard({ label, value, sub, color, highlight }) {
-  return (
-    <div className="stat-card" style={{
-      background: highlight ? `${color}08` : "white",
-      border: `1.5px solid ${highlight ? color + "30" : "#f3f4f6"}`,
-      borderRadius: 16,
-      padding: "20px",
-      boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
-    }}>
-      <div style={{ fontSize: 11, fontWeight: 600, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 8 }}>{label}</div>
-      <div style={{ fontSize: 22, color: highlight ? color : "#111827", fontWeight: 700, letterSpacing: "-0.5px", fontFamily: "'DM Sans', sans-serif" }}>{value}</div>
-      {sub && <div style={{ fontSize: 11, color: "#9ca3af", marginTop: 4 }}>{sub}</div>}
     </div>
   );
 }
