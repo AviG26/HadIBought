@@ -231,6 +231,7 @@ export default function HadIBought() {
           parsed[ym] = {
             adjClose: parseFloat(vals["5. adjusted close"]),
             close: parseFloat(vals["4. close"]),
+            dividend: parseFloat(vals["7. dividend amount"] || 0),
           };
         }
         setLiveData(parsed);
@@ -245,17 +246,19 @@ export default function HadIBought() {
       const dates = Object.keys(liveData).sort();
       const lookup = {};
       for (const ym of dates) {
-        const { adjClose, close } = liveData[ym];
-        lookup[ym] = { adj: adjClose, close, cpi: 1 };
+        const { adjClose, close, dividend } = liveData[ym];
+        lookup[ym] = { adj: adjClose, close, cpi: 1, dividend: dividend || 0 };
       }
       for (const [ym, , , cpi] of RAW_DATA) {
         if (lookup[ym]) lookup[ym].cpi = cpi;
       }
       return { lookup, dates };
     }
-    // Static fallback
+    // Static fallback — estimate dividend as 1.6% annually
     const lookup = {};
-    for (const [ym, adj, close, cpi] of RAW_DATA) lookup[ym] = { adj, close, cpi };
+    for (const [ym, adj, close, cpi] of RAW_DATA) {
+      lookup[ym] = { adj, close, cpi, dividend: (close * 0.016) / 12 };
+    }
     return { lookup, dates: ALL_DATES };
   }, [liveData]);
 
@@ -280,6 +283,15 @@ export default function HadIBought() {
     const years = dates.length / 12;
     const finalTR = last["With Dividends"];
     const finalPO = last["Price Only"];
+
+    // Real cash on cash: sum actual dividends paid per share, scale to investment
+    const firstClose = first.close;
+    const sharesOwned = investment / firstClose;
+    const totalDividendsPaid = dates.reduce((sum, date) => {
+      return sum + ((lookup[date]?.dividend || 0) * sharesOwned);
+    }, 0);
+    const avgCashOnCash = years > 0 ? (totalDividendsPaid / years / investment) * 100 : 0;
+
     return {
       chartData: thinArray(points),
       stats: {
@@ -289,6 +301,7 @@ export default function HadIBought() {
         cagrTR: (Math.pow(finalTR / investment, 1 / years) - 1) * 100,
         cagrPO: (Math.pow(finalPO / investment, 1 / years) - 1) * 100,
         divBoost: finalTR - finalPO,
+        avgCashOnCash,
         years: years.toFixed(1),
       }
     };
@@ -576,7 +589,7 @@ export default function HadIBought() {
                 />
                 <MiniStat
                   label="Avg Cash on Cash"
-                  value={formatPct((stats.divBoost / investment) / parseFloat(stats.years)) + "/yr"}
+                  value={formatPct(stats.avgCashOnCash) + "/yr"}
                   color="#10b981"
                   tooltip="Average annual dividend income as a % of your initial investment"
                 />
